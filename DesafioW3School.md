@@ -175,6 +175,8 @@ Calcula o gasto médio de cada cliente, ajudando a identificar os clientes mais 
 # Conclusão 🎉
 Com essas consultas SQL, podemos extrair dados valiosos sobre clientes, produtos, vendas e funcionários para tomar decisões mais informadas. Esses insights ajudam a entender o comportamento do consumidor, o desempenho de vendas e a otimização de estoque, promovendo um melhor planejamento estratégico! 📈
 
+Feito com 💙 por Luis Felipe Pereira.
+
 
 
 
