@@ -15,9 +15,12 @@ Um banco de dados é uma coleção organizada de informações que podem ser fac
 ### 1. Criar um Banco de Dados
 ```sql
 CREATE DATABASE MeuBancoDeDados;
-CREATE DATABASE: Comando para criar um banco de dados.
-MeuBancoDeDados: Nome do banco de dados. Escolha um nome descritivo.
 ```
+```sql
+CREATE DATABASE: Comando para criar um banco de dados.
+```
+MeuBancoDeDados: Nome do banco de dados. Escolha um nome descritivo.
+
 ---
 
 2. Selecionar o Banco de Dados para Uso
@@ -25,8 +28,8 @@ MeuBancoDeDados: Nome do banco de dados. Escolha um nome descritivo.
 ```sql
 
 USE MeuBancoDeDados;
-Isso define qual banco de dados será usado para as operações subsequentes.
 ```
+Isso define qual banco de dados será usado para as operações subsequentes.
 
 📝 Exemplos de Criação de Bancos de Dados
 Banco de Dados para Gerenciamento de Loja
@@ -34,19 +37,27 @@ Banco de Dados para Gerenciamento de Loja
 ```sql
 
 CREATE DATABASE LojaVirtual;
+```
+```sql
 USE LojaVirtual;
+```
 Banco de Dados para Controle Acadêmico
 
-```
 ```sql
 CREATE DATABASE SistemaAcademico;
-USE SistemaAcademico;
-Banco de Dados para Redes Sociais
 ```
 ```sql
+USE SistemaAcademico;
+```
+Banco de Dados para Redes Sociais
+
+```sql
 CREATE DATABASE RedeSocial;
+```
+```sql
 USE RedeSocial;
 ```
+
 🏗️ Criação de Tabelas
 1. Estrutura Básica de uma Tabela
    
@@ -54,12 +65,14 @@ USE RedeSocial;
 CREATE TABLE NomeDaTabela (
     NomeColuna TipoDados Restricoes
 );
+```
+
 NomeDaTabela: Nome da tabela.
 NomeColuna: Nome de cada coluna.
 TipoDados: Tipo de dado que a coluna armazena (ex.: INT, VARCHAR, DATE).
 Restricoes: Regras opcionais (ex.: PRIMARY KEY, NOT NULL).
 
-```
+
 📋 Exemplos Práticos de Criação de Tabelas
 Tabela para Loja Virtual: Produtos
 
