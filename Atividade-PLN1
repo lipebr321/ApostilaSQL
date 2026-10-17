@@ -1,0 +1,733 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "12 Exercícios Práticos de PLN — Google Colab\n",
+        "Conteúdos: corpus, tokenização, stopwords, stemming, lematização, POS tagging, Bag of Words (BoW), TF-IDF, embeddings, N-gramas e Regex.\n",
+        "Versão resolvida: execute as células em ordem no Google Colab. Todos os 12 exercícios possuem código, impressões e comentários explicativos."
+      ],
+      "metadata": {
+        "id": "79WzevgoJk-1"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Preparação do ambiente"
+      ],
+      "metadata": {
+        "id": "-75j1zNZJq-R"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Execute no Google Colab para instalar os pacotes e o modelo em português.\n",
+        "%pip -q install nltk spacy scikit-learn gensim regex\n",
+        "!python -m spacy download pt_core_news_sm"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "TefxVgpgJtpX",
+        "outputId": "dc8a44fe-a444-48e3-eb8a-c7f659ef0434"
+      },
+      "execution_count": 1,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m27.8/27.8 MB\u001b[0m \u001b[31m61.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hCollecting pt-core-news-sm==3.8.0\n",
+            "  Downloading https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.8.0/pt_core_news_sm-3.8.0-py3-none-any.whl (13.0 MB)\n",
+            "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m13.0/13.0 MB\u001b[0m \u001b[31m71.3 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hInstalling collected packages: pt-core-news-sm\n",
+            "Successfully installed pt-core-news-sm-3.8.0\n",
+            "\u001b[38;5;2m✔ Download and installation successful\u001b[0m\n",
+            "You can now load the package via spacy.load('pt_core_news_sm')\n",
+            "\u001b[38;5;3m⚠ Restart to reload dependencies\u001b[0m\n",
+            "If you are in a Jupyter or Colab notebook, you may need to restart Python in\n",
+            "order to load all the package's dependencies. You can do this by selecting the\n",
+            "'Restart kernel' or 'Restart runtime' option.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import re  # Regex do Python; necessário nos exercícios 2 e 11\n",
+        "import regex  # Alternativa com suporte avançado a padrões Unicode\n",
+        "import nltk\n",
+        "import spacy\n",
+        "import numpy as np\n",
+        "from nltk.corpus import stopwords\n",
+        "from nltk.stem import RSLPStemmer\n",
+        "from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer\n",
+        "from sklearn.linear_model import LogisticRegression\n",
+        "from gensim.models import Word2Vec\n",
+        "\n",
+        "nltk.download(\"stopwords\", quiet=True)\n",
+        "nltk.download(\"rslp\", quiet=True)\n",
+        "nlp = spacy.load(\"pt_core_news_sm\")\n",
+        "print(\"Ambiente e bibliotecas preparados para a aula!\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "yfc6-fnlJ5dT",
+        "outputId": "04209691-fa3b-49bf-c5ce-98e92053c7c3"
+      },
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Ambiente e bibliotecas preparados para a aula!\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 1 — Corpus\n",
+        "Crie um corpus com pelo menos seis frases sobre avaliações de produtos ou serviços. Exiba a quantidade de documentos, o tamanho de cada documento e a terceira frase."
+      ],
+      "metadata": {
+        "id": "069ZwJq7KBFC"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "corpus = [\n",
+        "    \"O produto chegou antes do prazo e funciona perfeitamente.\",\n",
+        "    \"O atendimento da loja foi rápido e muito cordial.\",\n",
+        "    \"A qualidade do material superou minhas expectativas.\",\n",
+        "    \"O aplicativo trava frequentemente e precisa melhorar.\",\n",
+        "    \"A entrega atrasou e a embalagem veio danificada.\",\n",
+        "    \"O serviço de suporte resolveu meu problema no mesmo dia.\"\n",
+        "]\n",
+        "print(\"Quantidade de documentos:\", len(corpus))\n",
+        "print(\"Tamanho de cada documento (em caracteres):\")\n",
+        "for indice, frase in enumerate(corpus, start=1):\n",
+        "    print(f\"Documento {indice}: {len(frase)} caracteres\")\n",
+        "print(\"Terceira frase:\", corpus[2])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "mjzm88BiKCPO",
+        "outputId": "1f7a0d19-9343-47f6-c987-ebdfb6865e1c"
+      },
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Quantidade de documentos: 6\n",
+            "Tamanho de cada documento (em caracteres):\n",
+            "Documento 1: 57 caracteres\n",
+            "Documento 2: 49 caracteres\n",
+            "Documento 3: 52 caracteres\n",
+            "Documento 4: 53 caracteres\n",
+            "Documento 5: 48 caracteres\n",
+            "Documento 6: 56 caracteres\n",
+            "Terceira frase: A qualidade do material superou minhas expectativas.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 2 — Expressões regulares (Regex)\n",
+        "Expressões regulares ajudam a localizar, extrair e substituir padrões textuais antes de outras etapas de PLN.\n",
+        "Tarefa:\n",
+        "1. Extraia os e-mails e as URLs da mensagem utilizando regex;\n",
+        "2. Substitua sequências de espaços por apenas um espaço utilizando regex;\n",
+        "3. Remova os sinais de pontuação, mantendo letras e números utilizando regex.\n",
+        "Mensagem de exemplo:\n",
+        "\"Dúvidas? Escreva para aluno@fatec.br ou acesse https://fatec.br.   Obrigado!!!\""
+      ],
+      "metadata": {
+        "id": "7rJj-hFVKFF2"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "mensagem = \"Dúvidas? Escreva para luis.felipe.aluno@fatec.br ou acesse https://fatec.br.   Obrigado!!!\"\n",
+        "\n",
+        "# Procura e-mails e URLs; a borda final evita incluir a pontuação da frase.\n",
+        "emails = re.findall(r\"[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}\", mensagem)\n",
+        "urls = re.findall(r\"https?://[^\\s,;!?]+\", mensagem)\n",
+        "urls = [url.rstrip(\".\") for url in urls]\n",
+        "\n",
+        "mensagem_espacos = re.sub(r\"\\s+\", \" \", mensagem).strip()\n",
+        "# [^\\w\\s] remove pontuação; em Python 3, \\w preserva letras acentuadas.\n",
+        "mensagem_limpa = re.sub(r\"[^\\w\\s]\", \"\", mensagem_espacos)\n",
+        "\n",
+        "print(\"E-mails:\", emails)\n",
+        "print(\"URLs:\", urls)\n",
+        "print(\"Espaços normalizados:\", mensagem_espacos)\n",
+        "print(\"Sem pontuação:\", mensagem_limpa)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "EFq1ABcTKIZv",
+        "outputId": "93913f8c-a338-49d1-b492-cbbc480aead8"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "E-mails: ['luis.felipe.aluno@fatec.br']\n",
+            "URLs: ['https://fatec.br']\n",
+            "Espaços normalizados: Dúvidas? Escreva para luis.felipe.aluno@fatec.br ou acesse https://fatec.br. Obrigado!!!\n",
+            "Sem pontuação: Dúvidas Escreva para luisfelipealunofatecbr ou acesse httpsfatecbr Obrigado\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 3 — Tokenização\n",
+        "Use spaCy para tokenizar a frase. Mostre todos os tokens e, depois, apenas palavras, sem espaços ou pontuação."
+      ],
+      "metadata": {
+        "id": "l8ZQh7rhKfBP"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "texto = \"A inteligência artificial está transformando o atendimento ao cliente!\"\n",
+        "doc = nlp(texto)\n",
+        "print(\"Todos os tokens:\", [token.text for token in doc])\n",
+        "print(\"Apenas palavras:\", [token.text for token in doc if token.is_alpha])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "hGI6xaRkKfqT",
+        "outputId": "c19aa872-e560-4cdd-f2d8-075ceca1567e"
+      },
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Todos os tokens: ['A', 'inteligência', 'artificial', 'está', 'transformando', 'o', 'atendimento', 'ao', 'cliente', '!']\n",
+            "Apenas palavras: ['A', 'inteligência', 'artificial', 'está', 'transformando', 'o', 'atendimento', 'ao', 'cliente']\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 4 — Stopwords\n",
+        "Use a lista de stopwords em português do NLTK. Tokenize o texto em minúsculas e remova stopwords e pontuação. Lembre-se: stopwords só devem ser removidas quando fizer sentido para a tarefa."
+      ],
+      "metadata": {
+        "id": "Gk2cQpbXKjOe"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "texto = \"O sistema de atendimento foi muito rápido e resolveu o meu problema.\"\n",
+        "stop_pt = set(stopwords.words(\"portuguese\"))\n",
+        "doc = nlp(texto.lower())\n",
+        "tokens = [token.text for token in doc if token.is_alpha]\n",
+        "sem_stopwords = [palavra for palavra in tokens if palavra not in stop_pt]\n",
+        "print(\"Tokens em minúsculas:\", tokens)\n",
+        "print(\"Sem stopwords e pontuação:\", sem_stopwords)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "pnoht9ekKjuF",
+        "outputId": "edb1aaaf-5ad1-40c9-804e-14fe6b60a95f"
+      },
+      "execution_count": 7,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Tokens em minúsculas: ['o', 'sistema', 'de', 'atendimento', 'foi', 'muito', 'rápido', 'e', 'resolveu', 'o', 'meu', 'problema']\n",
+            "Sem stopwords e pontuação: ['sistema', 'atendimento', 'rápido', 'resolveu', 'problema']\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 5 — Stemming\n",
+        "Aplique RSLPStemmer às palavras e compare os radicais. O radical pode não ser uma palavra válida."
+      ],
+      "metadata": {
+        "id": "Sd56WqEXKmOD"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "palavras = [\"estudar\", \"estudando\", \"estudou\", \"estudos\", \"brincadeira\", \"brincando\"]\n",
+        "stemmer = RSLPStemmer()\n",
+        "for palavra in palavras:\n",
+        "    print(f\"{palavra:15} -> {stemmer.stem(palavra)}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "91lKQVvoKl5q",
+        "outputId": "e2305c3b-260e-4d24-9d9e-cec1bc6d5751"
+      },
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "estudar         -> estud\n",
+            "estudando       -> estud\n",
+            "estudou         -> estud\n",
+            "estudos         -> estud\n",
+            "brincadeira     -> brinc\n",
+            "brincando       -> brinc\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 6 — Lematização\n",
+        "Use o modelo spaCy em português para exibir cada palavra e seu lema. Observe como o modelo trata flexões verbais e nominais."
+      ],
+      "metadata": {
+        "id": "_WAB37k9Ktpe"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "texto = \"Os alunos estudaram, estão estudando e estudarão processamento de textos.\"\n",
+        "doc = nlp(texto)\n",
+        "print(f\"{'Palavra':20} | Lema\")\n",
+        "print(\"-\" * 40)\n",
+        "for token in doc:\n",
+        "    if token.is_alpha:\n",
+        "        print(f\"{token.text:20} | {token.lemma_}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "XuxcEirCKuKF",
+        "outputId": "16df06a1-50bd-4683-c1ab-544c356d4b17"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Palavra              | Lema\n",
+            "----------------------------------------\n",
+            "Os                   | o\n",
+            "alunos               | aluno\n",
+            "estudaram            | estudar\n",
+            "estão                | estar\n",
+            "estudando            | estudar\n",
+            "e                    | e\n",
+            "estudarão            | estudar\n",
+            "processamento        | processamento\n",
+            "de                   | de\n",
+            "textos               | texto\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 7 — POS tagging\n",
+        "Exiba token, categoria gramatical geral (pos_) e etiqueta detalhada (tag_) para a frase."
+      ],
+      "metadata": {
+        "id": "gpGOiAnbK1Xx"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "texto = \"Os estudantes desenvolveram um excelente projeto de inteligência artificial.\"\n",
+        "doc = nlp(texto)\n",
+        "print(f\"{'Token':18} {'POS':12} {'TAG'}\")\n",
+        "print(\"-\" * 48)\n",
+        "for token in doc:\n",
+        "    print(f\"{token.text:18} {token.pos_:12} {token.tag_}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "xbkM1vrmK2Bq",
+        "outputId": "9b2cdca7-426c-4608-e775-f7b496df6747"
+      },
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Token              POS          TAG\n",
+            "------------------------------------------------\n",
+            "Os                 DET          DET\n",
+            "estudantes         NOUN         NOUN\n",
+            "desenvolveram      VERB         VERB\n",
+            "um                 DET          DET\n",
+            "excelente          ADJ          ADJ\n",
+            "projeto            NOUN         NOUN\n",
+            "de                 ADP          ADP\n",
+            "inteligência       NOUN         NOUN\n",
+            "artificial         ADJ          ADJ\n",
+            ".                  PUNCT        PUNCT\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 8 — Bag of Words (BoW)\n",
+        "Use CountVectorizer para gerar o vocabulário e a matriz de contagens. Cada linha corresponde a um documento."
+      ],
+      "metadata": {
+        "id": "ccWsDMdbK4Xv"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "documentos = [\"gostei do atendimento rápido\", \"atendimento lento e ruim\", \"gostei do produto\"]\n",
+        "vetorizador = CountVectorizer()\n",
+        "X_bow = vetorizador.fit_transform(documentos)\n",
+        "print(\"Vocabulário (termos em ordem de coluna):\", vetorizador.get_feature_names_out().tolist())\n",
+        "print(\"Matriz BoW (documentos x termos):\")\n",
+        "print(X_bow.toarray())\n",
+        "print(\"Dimensões:\", X_bow.shape)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "78iAcKj-K6z4",
+        "outputId": "3c63283a-395f-4fe9-80ba-b7ce04d63e8a"
+      },
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Vocabulário (termos em ordem de coluna): ['atendimento', 'do', 'gostei', 'lento', 'produto', 'ruim', 'rápido']\n",
+            "Matriz BoW (documentos x termos):\n",
+            "[[1 1 1 0 0 0 1]\n",
+            " [1 0 0 1 0 1 0]\n",
+            " [0 1 1 0 1 0 0]]\n",
+            "Dimensões: (3, 7)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 9 — N-gramas\n",
+        "N-gramas são sequências de n tokens consecutivos:\n",
+        "- Unigrama (1-grama): uma palavra, como inteligência;\n",
+        "- Bigrama (2-grama): duas palavras consecutivas, como inteligência artificial;\n",
+        "- Trigrama (3-grama): três palavras consecutivas, como processamento de linguagem.\n",
+        "Tarefa: use CountVectorizer para comparar o vocabulário de unigramas com o de unigramas e bigramas. Observe como os bigramas preservam algumas combinações de palavras."
+      ],
+      "metadata": {
+        "id": "ok6TBNPhLEk9"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "documentos_ngram = [\n",
+        "    \"inteligência artificial processa linguagem\",\n",
+        "    \"processamento de linguagem natural\",\n",
+        "    \"inteligência artificial aprende padrões\"\n",
+        "]\n",
+        "unigramas = CountVectorizer(ngram_range=(1, 1))\n",
+        "unigramas_bigramas = CountVectorizer(ngram_range=(1, 2))\n",
+        "X_uni = unigramas.fit_transform(documentos_ngram)\n",
+        "X_uni_bi = unigramas_bigramas.fit_transform(documentos_ngram)\n",
+        "print(\"Unigramas:\", unigramas.get_feature_names_out().tolist())\n",
+        "print(\"Unigramas e bigramas:\", unigramas_bigramas.get_feature_names_out().tolist())\n",
+        "print(\"Dimensões (unigramas):\", X_uni.shape)\n",
+        "print(\"Dimensões (unigramas + bigramas):\", X_uni_bi.shape)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "hYHDpoJ0LIbZ",
+        "outputId": "5f99df34-a1b8-4b4b-8a4b-1be13bb69748"
+      },
+      "execution_count": 12,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Unigramas: ['aprende', 'artificial', 'de', 'inteligência', 'linguagem', 'natural', 'padrões', 'processa', 'processamento']\n",
+            "Unigramas e bigramas: ['aprende', 'aprende padrões', 'artificial', 'artificial aprende', 'artificial processa', 'de', 'de linguagem', 'inteligência', 'inteligência artificial', 'linguagem', 'linguagem natural', 'natural', 'padrões', 'processa', 'processa linguagem', 'processamento', 'processamento de']\n",
+            "Dimensões (unigramas): (3, 9)\n",
+            "Dimensões (unigramas + bigramas): (3, 17)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 10 — TF-IDF\n",
+        "Gere a matriz TF-IDF dos mesmos documentos. Mostre os termos e a matriz arredondada."
+      ],
+      "metadata": {
+        "id": "Bcjw1gRQLOBw"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "documentos = [\"gostei do atendimento rápido\", \"atendimento lento e ruim\", \"gostei do produto\"]\n",
+        "vetorizador = TfidfVectorizer()\n",
+        "X_tfidf = vetorizador.fit_transform(documentos)\n",
+        "print(\"Termos:\", vetorizador.get_feature_names_out().tolist())\n",
+        "print(\"Matriz TF-IDF arredondada (3 casas decimais):\")\n",
+        "print(np.round(X_tfidf.toarray(), 3))\n",
+        "print(\"Dimensões:\", X_tfidf.shape)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "F-QVUZX3LOkH",
+        "outputId": "1b72f80b-aaef-497e-9fae-ac853ef116de"
+      },
+      "execution_count": 13,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Termos: ['atendimento', 'do', 'gostei', 'lento', 'produto', 'ruim', 'rápido']\n",
+            "Matriz TF-IDF arredondada (3 casas decimais):\n",
+            "[[0.46  0.46  0.46  0.    0.    0.    0.605]\n",
+            " [0.474 0.    0.    0.623 0.    0.623 0.   ]\n",
+            " [0.    0.518 0.518 0.    0.681 0.    0.   ]]\n",
+            "Dimensões: (3, 7)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 11 — Embeddings com Word2Vec\n",
+        "Treine um Word2Vec didático. Consulte palavras semelhantes a 'textos'. Como o corpus é pequeno, não trate os resultados como conclusões confiáveis."
+      ],
+      "metadata": {
+        "id": "MQr86N5wLQt5"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "corpus_embedding = [\n",
+        " \"processamento de linguagem natural analisa textos\",\n",
+        " \"linguagem natural permite comunicação entre pessoas\",\n",
+        " \"modelos de linguagem aprendem padrões em textos\",\n",
+        " \"ciência de dados utiliza dados para construir modelos\",\n",
+        " \"aprendizado de máquina identifica padrões nos dados\",\n",
+        " \"textos podem ser representados por vetores numéricos\",\n",
+        " \"embeddings representam palavras em espaços vetoriais\",\n",
+        " \"modelos de linguagem processam palavras e textos\",\n",
+        " \"dados de treinamento ajudam modelos a aprender\",\n",
+        " \"processamento de textos pode usar aprendizado de máquina\"\n",
+        "]\n",
+        "sentencas = [re.findall(r\"\\b\\w+\\b\", frase.lower()) for frase in corpus_embedding]\n",
+        "modelo = Word2Vec(\n",
+        "    sentences=sentencas, vector_size=30, window=3,\n",
+        "    min_count=1, workers=1, seed=42\n",
+        ")\n",
+        "print(\"Palavras mais semelhantes a 'textos':\")\n",
+        "for palavra, similaridade in modelo.wv.most_similar(\"textos\", topn=5):\n",
+        "    print(f\"{palavra:18} similaridade = {similaridade:.4f}\")\n",
+        "print(\"Observação: com somente dez frases, as similaridades não são confiáveis para inferir significado.\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "AJ7M0tc9LTIg",
+        "outputId": "aaf456c4-3388-40fd-ef08-615887edf332"
+      },
+      "execution_count": 14,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Palavras mais semelhantes a 'textos':\n",
+            "e                  similaridade = 0.4214\n",
+            "padrões            similaridade = 0.3339\n",
+            "natural            similaridade = 0.3332\n",
+            "pessoas            similaridade = 0.2535\n",
+            "vetores            similaridade = 0.2203\n",
+            "Observação: com somente dez frases, as similaridades não são confiáveis para inferir significado.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Exercício 12 — Comparação e pipeline\n",
+        "Crie representações BoW e TF-IDF para as avaliações. Compare as dimensões e explique a diferença entre contar termos e ponderá-los. Desafio: treine uma LogisticRegression, lembrando que seis exemplos são insuficientes para avaliar generalização."
+      ],
+      "metadata": {
+        "id": "9qEieWOuLZut"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "textos = [\n",
+        " \"produto excelente e atendimento ótimo\", \"gostei muito do serviço\",\n",
+        " \"experiência boa e rápida\", \"produto ruim e atendimento péssimo\",\n",
+        " \"não gostei do serviço\", \"experiência lenta e desagradável\"\n",
+        "]\n",
+        "rotulos = [\"positivo\", \"positivo\", \"positivo\", \"negativo\", \"negativo\", \"negativo\"]\n",
+        "\n",
+        "bow = CountVectorizer()\n",
+        "tfidf = TfidfVectorizer()\n",
+        "X_bow = bow.fit_transform(textos)\n",
+        "X_tfidf = tfidf.fit_transform(textos)\n",
+        "\n",
+        "print(\"Formato BoW (documentos, termos):\", X_bow.shape)\n",
+        "print(\"Formato TF-IDF (documentos, termos):\", X_tfidf.shape)\n",
+        "print(\"Termos BoW:\", bow.get_feature_names_out().tolist())\n",
+        "print(\"Primeira linha BoW (contagens):\", X_bow.toarray()[0])\n",
+        "print(\"Primeira linha TF-IDF (pesos):\", np.round(X_tfidf.toarray()[0], 3))\n",
+        "print(\"BoW contabiliza ocorrências; TF-IDF pondera ocorrências pela raridade dos termos no corpus.\")\n",
+        "\n",
+        "# Desafio opcional proposto: classificação supervisionada com regressão logística.\n",
+        "classificador = LogisticRegression(max_iter=1000, random_state=42)\n",
+        "classificador.fit(X_tfidf, rotulos)\n",
+        "previsoes_treino = classificador.predict(X_tfidf)\n",
+        "print(\"Rótulos reais:\", rotulos)\n",
+        "print(\"Previsões nos dados de TREINO:\", previsoes_treino.tolist())\n",
+        "print(\"Atenção: 6 exemplos são insuficientes para avaliar generalização; isto é só uma demonstração.\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "IMZ3HAPbLaMG",
+        "outputId": "e5d29ce7-b2a9-4367-8719-25813bf581a9"
+      },
+      "execution_count": 15,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Formato BoW (documentos, termos): (6, 16)\n",
+            "Formato TF-IDF (documentos, termos): (6, 16)\n",
+            "Termos BoW: ['atendimento', 'boa', 'desagradável', 'do', 'excelente', 'experiência', 'gostei', 'lenta', 'muito', 'não', 'produto', 'péssimo', 'ruim', 'rápida', 'serviço', 'ótimo']\n",
+            "Primeira linha BoW (contagens): [1 0 0 0 1 0 0 0 0 0 1 0 0 0 0 1]\n",
+            "Primeira linha TF-IDF (pesos): [0.448 0.    0.    0.    0.547 0.    0.    0.    0.    0.    0.448 0.\n",
+            " 0.    0.    0.    0.547]\n",
+            "BoW contabiliza ocorrências; TF-IDF pondera ocorrências pela raridade dos termos no corpus.\n",
+            "Rótulos reais: ['positivo', 'positivo', 'positivo', 'negativo', 'negativo', 'negativo']\n",
+            "Previsões nos dados de TREINO: ['positivo', 'positivo', 'positivo', 'negativo', 'negativo', 'negativo']\n",
+            "Atenção: 6 exemplos são insuficientes para avaliar generalização; isto é só uma demonstração.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Resumo dos conceitos\n",
+        "- Corpus: coleção de documentos.\n",
+        "- Expressões regulares (Regex): padrões utilizados para localizar, extrair, substituir e limpar textos de forma eficiente.\n",
+        "- Tokenização: divisão do texto em unidades (geralmente palavras ou pontuações).\n",
+        "- Stopwords: palavras frequentes que podem ser removidas conforme a tarefa.\n",
+        "- Stemming: redução aproximada ao radical.\n",
+        "- Lematização: busca da forma canônica/dicionarizada da palavra.\n",
+        "- POS tagging: atribuição de categorias gramaticais aos tokens.\n",
+        "- Bag of Words (BoW): representação simples do texto por meio da contagem de termos.\n",
+        "- N-gramas: sequências de n tokens consecutivos que ajudam a preservar o contexto local de grupos de palavras.\n",
+        "- TF-IDF: ponderação de termos que equilibra a frequência da palavra no documento com sua raridade no corpus.\n",
+        "- Embeddings: representações vetoriais contínuas que capturam o significado semântico e padrões de uso das palavras.\n",
+        "Importante: não existe uma única sequência de pré-processamento adequada a todas as tarefas de PLN. Cada escolha deve ser justificada pelo objetivo do projeto."
+      ],
+      "metadata": {
+        "id": "l8whpqvGLegt"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "ganYUdX9LhVN"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
